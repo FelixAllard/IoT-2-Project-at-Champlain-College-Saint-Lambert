@@ -24,6 +24,10 @@ nav {
     transition: color 0.3s;
 }
 
+.navbar .nav-link:hover {
+    color: #ffffff;
+}
+
 .container {
     border-radius: 8px;
     background-color: #1e1e1e;
