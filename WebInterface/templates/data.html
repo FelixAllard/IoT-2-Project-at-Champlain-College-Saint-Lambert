@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Data Dashboard</h1>
+<h1>Data</h1>
 <p>Here is the data visualization:</p>
-<img src="data:image/png;base64,{{ plot_url }}" alt="Data Plot">
-<p>Average Value: {{ avg }}</p>
+<img src="data:image/png;base64,{{ plot_url }}" alt="Data Plot" class="img-fluid">
+<p>Average Value: <strong>{{ avg }}</strong></p>
 {% endblock %}
