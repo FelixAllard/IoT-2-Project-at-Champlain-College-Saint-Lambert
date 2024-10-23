@@ -2,7 +2,7 @@ from datetime import datetime
 
 from flask import Flask, jsonify
 
-from RaspberryPiApi.Model.Sensor import Sensor
+from Model.Sensor import Sensor
 
 app = Flask(__name__)
 
@@ -35,4 +35,4 @@ def sensor_to_dict(sensor):
     }
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=4999)

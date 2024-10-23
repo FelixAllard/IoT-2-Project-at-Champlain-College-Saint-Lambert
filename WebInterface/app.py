@@ -5,6 +5,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import io
 import base64
+import requests
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secure_key'
@@ -30,6 +31,21 @@ def index():
 @app.route('/data')
 @login_required
 def data():
+    try:
+        sensor_response = requests.get('http://localhost:4999/sensors') # Temporarily localhost
+        sensor_response.raise_for_status()
+        sensors = sensor_response.json()
+
+        ping_response = requests.get('http://localhost:4999/ping')
+        ping_response.raise_for_status()
+        ping_data = ping_response.json()
+
+    except requests.RequestException as e:
+        flash(f"Error fetching data: {e}")
+        sensors = []
+        ping_data = None
+
+    # Example plot
     img = io.BytesIO()
     plt.plot([0, 1, 2, 3], [10, 11, 12, 13])
     plt.title('Example Plot')
@@ -38,15 +54,16 @@ def data():
     plot_url = base64.b64encode(img.getvalue()).decode('utf8')
     plt.close()
 
-    data = [10, 11, 12, 13]
-    avg = sum(data) / len(data)
+    if sensors:
+        avg = sum(sensor['battery_percentage'] for sensor in sensors) / len(sensors)
+    else:
+        avg = 0
 
-    return render_template('data.html', plot_url=plot_url, avg=avg)
+    return render_template('data.html', plot_url=plot_url, avg=avg, sensors=sensors, ping_data=ping_data)
 
 @app.route('/aboutUs')
 def about():
     return render_template('aboutus.html', title='About Us')
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
