@@ -3,6 +3,16 @@
 {% block content %}
 <h1 class="text-center">Login</h1>
 
+<div id="flashMessageContainer" class="text-center mt-3">
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="alert alert-info">
+        <p>{{ messages[-1] }}</p>
+    </div>
+    {% endif %}
+    {% endwith %}
+</div>
+
 <div id="loadingContainer" class="text-center" style="display: none;">
     <div class="alert alert-info" id="loadingMessage" style="background-color: transparent; border: none;">
         <span class="spinner-border text-primary" role="status" aria-hidden="true" style="width: 3rem; height: 3rem;"></span>
@@ -14,7 +24,7 @@
     <p>Your Raspberry PI ID is: <span id="raspberryPiId" class="font-weight-bold"></span></p>
 </div>
 
-<form method="POST" id="loginForm" style="display: none;">
+<form method="POST" id="loginForm" style="display: none;" onsubmit="showLoading()">
     <input type="hidden" id="piId" name="id">
     <div class="form-group">
         <label for="password">Password</label>
@@ -28,14 +38,37 @@
     <button class="btn btn-blue mt-3" id="retryButton" onclick="checkConnection()">Try to connect again</button>
 </div>
 
+<div class="text-center mt-3">
+    <p>Current Raspberry Pi IP: <strong>{{ raspberryPi_IP }}</strong></p>
+    <button class="btn btn-info" onclick="window.location.href=`{{ url_for('set_ip_port') }}`">Change IP Address</button>
+</div>
+
 <script>
+    const raspberryPi_IP = "{{ raspberryPi_IP }}";
+    if (raspberryPi_IP === "http://None:None" && raspberryPi_IP === "" && raspberryPi_IP === "http://192.168.0.100:5000") {
+        window.location.href = "{{ url_for('set_ip_port') }}";
+    }
+
+    function showLoading() {
+        document.getElementById('loadingContainer').style.display = 'block';
+        document.getElementById('raspberryPiIdContainer').style.display = 'none';
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('errorContainer').style.display = 'none';
+        document.getElementById('flashMessageContainer').style.display = 'none';
+
+        document.getElementById('loadingMessage').innerHTML = `
+            <span class="spinner-border text-primary" role="status" aria-hidden="true" style="width: 3rem; height: 3rem;"></span>
+            <p class="mt-3">Logging in to Raspberry Pi...</p>
+        `;
+    }
+
     function checkConnection() {
         document.getElementById('loadingContainer').style.display = 'block';
         document.getElementById('raspberryPiIdContainer').style.display = 'none';
         document.getElementById('loginForm').style.display = 'none';
         document.getElementById('errorContainer').style.display = 'none';
 
-        fetch('http://localhost:4999/ping')
+        fetch(raspberryPi_IP + '/ping')
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
@@ -87,5 +120,11 @@
     }
 
     document.addEventListener('DOMContentLoaded', checkConnection);
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (raspberryPi_IP === "http://192.168.0.100:5000" || (raspberryPi_IP === "http://None:None" && raspberryPi_IP === "" && raspberryPi_IP)) {
+            window.location.href = "{{ url_for('set_ip_port') }}";
+        }
+    });
 </script>
 {% endblock %}

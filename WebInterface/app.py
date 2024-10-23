@@ -1,8 +1,7 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, jsonify
+from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, session, make_response
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 import matplotlib
 from flask_cors import CORS
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import io
 import base64
@@ -11,9 +10,9 @@ import requests
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:5000"}})
 
+# Default IP address for first time logging in
+default_raspberryPi_IP = "http://192.168.0.100:5000"
 app.config['SECRET_KEY'] = 'secure_key'
-
-raspberryPi_IP = 'http://localhost:4999'
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -33,9 +32,50 @@ def load_user(user_id):
 def index():
     return render_template('index.html')
 
+@app.route('/set_ip_port', methods=['GET', 'POST'])
+def set_ip_port():
+    if request.method == 'POST':
+        ip_address = request.form.get('ip_address')
+        port_number = request.form.get('port_number')
+        raspberryPi_IP = f"http://{ip_address}:{port_number}"
+
+        response = make_response(redirect(url_for('login')))
+        response.set_cookie('raspberryPi_IP', raspberryPi_IP)
+        return response
+
+    return render_template('set_ip_port.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    raspberryPi_IP = request.cookies.get('raspberryPi_IP', default_raspberryPi_IP)
+
+    if request.method == 'POST':
+        pi_id = request.form.get('id')
+        password = request.form['password']
+
+        if not pi_id:
+            flash('Raspberry Pi ID is missing. Please try again.')
+            return render_template('login.html', raspberryPi_IP=raspberryPi_IP)
+
+        try:
+            response = requests.post(f'{raspberryPi_IP}/password', json={'id': pi_id, 'password': password})
+            if response.status_code == 200:
+                user = User(id=pi_id)
+                login_user(user)
+                return redirect(url_for('data'))
+            else:
+                flash('Invalid password')
+        except requests.RequestException as e:
+            flash(f"Error during authentication: {e}")
+
+    return render_template('login.html', raspberryPi_IP=raspberryPi_IP)
+
+
 @app.route('/data')
 @login_required
 def data():
+    raspberryPi_IP = request.cookies.get('raspberryPi_IP', default_raspberryPi_IP)
+
     try:
         sensor_response = requests.get(f'{raspberryPi_IP}/sensors')
         sensor_response.raise_for_status()
@@ -73,29 +113,6 @@ def about():
 def get_id():
     raspberry_pi_id = '1'
     return jsonify({'id': raspberry_pi_id})
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        pi_id = request.form.get('id')
-        password = request.form['password']
-
-        if not pi_id:
-            flash('Raspberry Pi ID is missing. Please try again.')
-            return render_template('login.html')
-
-        try:
-            response = requests.post(f'{raspberryPi_IP}/password', json={'id': pi_id, 'password': password})
-            if response.status_code == 200:
-                user = User(id=pi_id)
-                login_user(user)
-                return redirect(url_for('data'))
-            else:
-                flash('Invalid password')
-        except requests.RequestException as e:
-            flash(f"Error during authentication: {e}")
-
-    return render_template('login.html')
 
 @app.route('/logout')
 @login_required

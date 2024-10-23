@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="text-center">Raspberry Pi Connection</h1>
+
+<form id="ipPortForm" method="POST" action="{{ url_for('set_ip_port') }}" onsubmit="return validateForm()">
+    <div class="form-group">
+        <label for="ip">Raspberry Pi IP Address</label>
+        <input type="text" class="form-control" id="ip" name="ip_address" placeholder="Enter Raspberry Pi IP" required>
+    </div>
+    <div class="form-group">
+        <label for="port">Port</label>
+        <input type="text" class="form-control" id="port" name="port_number" placeholder="Enter Port (e.g., 4999)" required>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3">Connect</button>
+</form>
+
+<div id="loadingContainer" class="text-center" style="display: none;">
+    <div class="alert alert-info" id="loadingMessage" style="background-color: transparent; border: none;">
+        <span class="spinner-border text-primary" role="status" aria-hidden="true" style="width: 3rem; height: 3rem;"></span>
+        <p class="mt-3">Connecting to Raspberry Pi...</p>
+    </div>
+</div>
+
+<div id="errorContainer" class="text-center mt-4" style="display: none;">
+    <div class="alert alert-danger" id="errorMessage"></div>
+    <button class="btn btn-blue mt-3" onclick="retryConnection()">Try to connect again</button>
+</div>
+
+<form method="POST" id="loginForm" style="display: none;">
+    <input type="hidden" id="piId" name="id">
+    <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" class="form-control" id="password" name="password" required maxlength="20" placeholder="Enter your password">
+    </div>
+    <button type="submit" class="btn btn-primary mt-3 btn-block">Login</button>
+</form>
+
+<script>
+    function validateForm() {
+        const ipInput = document.getElementById('ip').value.trim();
+        const portInput = document.getElementById('port').value.trim();
+
+        const ipPattern = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){2}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        const portPattern = /^[0-9]{1,5}$/;
+
+        if (ipInput !== "localhost" && !ipPattern.test(ipInput)) {
+            alert("Please enter a valid IP address (e.g., 192.168.1.1) or 'localhost'.");
+            return false;
+        }
+
+        if (!portPattern.test(portInput) || parseInt(portInput) < 1 || parseInt(portInput) > 65535) {
+            alert("Please enter a valid port number (1-65535).");
+            return false;
+        }
+
+        return true;
+    }
+
+    function retryConnection() {
+        document.getElementById('ipPortForm').style.display = 'block';
+        document.getElementById('loadingContainer').style.display = 'none';
+        document.getElementById('errorContainer').style.display = 'none';
+    }
+</script>
+
+{% endblock %}
