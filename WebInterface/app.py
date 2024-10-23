@@ -43,6 +43,11 @@ def data():
 
     return render_template('data.html', plot_url=plot_url, avg=avg)
 
+@app.route('/aboutUs')
+def about():
+    return render_template('aboutus.html', title='About Us')
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
