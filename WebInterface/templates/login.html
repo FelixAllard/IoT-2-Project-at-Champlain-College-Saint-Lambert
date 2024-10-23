@@ -1,16 +1,91 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Login</h1>
-<form method="POST">
-    <div class="form-group">
-        <label for="username">Username</label>
-        <input type="text" class="form-control" id="username" name="username" required>
+<h1 class="text-center">Login</h1>
+
+<div id="loadingContainer" class="text-center" style="display: none;">
+    <div class="alert alert-info" id="loadingMessage" style="background-color: transparent; border: none;">
+        <span class="spinner-border text-primary" role="status" aria-hidden="true" style="width: 3rem; height: 3rem;"></span>
+        <p class="mt-3">Connecting to Raspberry Pi...</p>
     </div>
+</div>
+
+<div id="raspberryPiIdContainer" class="text-center" style="display: none;">
+    <p>Your Raspberry PI ID is: <span id="raspberryPiId" class="font-weight-bold"></span></p>
+</div>
+
+<form method="POST" id="loginForm" style="display: none;">
+    <input type="hidden" id="piId" name="id">
     <div class="form-group">
         <label for="password">Password</label>
-        <input type="password" class="form-control" id="password" name="password" required>
+        <input type="password" class="form-control" id="password" name="password" required maxlength="20" placeholder="Enter your password">
     </div>
-    <button type="submit" class="btn btn-primary mt-3">Login</button>
+    <button type="submit" class="btn btn-primary mt-3 btn-block">Login</button>
 </form>
+
+<div id="errorContainer" class="text-center mt-4" style="display: none;">
+    <div class="alert alert-danger" id="errorMessage"></div>
+    <button class="btn btn-blue mt-3" id="retryButton" onclick="checkConnection()">Try to connect again</button>
+</div>
+
+<script>
+    function checkConnection() {
+        document.getElementById('loadingContainer').style.display = 'block';
+        document.getElementById('raspberryPiIdContainer').style.display = 'none';
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('errorContainer').style.display = 'none';
+
+        fetch('http://localhost:4999/ping')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.message === 'pong') {
+                    console.log("Raspberry Pi is connected.");
+                    fetchRaspberryPiId();
+                } else {
+                    throw new Error('Unexpected response from server');
+                }
+            })
+            .catch(error => {
+                console.error('Error connecting to Raspberry Pi:', error);
+                document.getElementById('errorMessage').textContent = 'Couldn\'t connect to the Raspberry PI';
+                document.getElementById('errorContainer').style.display = 'block';
+                document.getElementById('loadingContainer').style.display = 'none';
+            });
+    }
+
+    function fetchRaspberryPiId() {
+        fetch('id')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.id) {
+                    document.getElementById('raspberryPiId').textContent = data.id;
+                    document.getElementById('piId').value = data.id;
+                    console.log("Raspberry Pi ID fetched:", data.id);
+                    document.getElementById('raspberryPiIdContainer').style.display = 'block';
+                    document.getElementById('loginForm').style.display = 'block';
+                    document.getElementById('loadingContainer').style.display = 'none';
+                } else {
+                    throw new Error('ID not found');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching Raspberry Pi ID:', error);
+                document.getElementById('errorMessage').textContent = 'Couldn\'t connect to the Raspberry PI';
+                document.getElementById('errorContainer').style.display = 'block';
+                document.getElementById('loadingContainer').style.display = 'none';
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', checkConnection);
+</script>
 {% endblock %}
