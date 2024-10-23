@@ -1,8 +1,19 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Data</h1>
-<p>Here is the data visualization:</p>
-<img src="data:image/png;base64,{{ plot_url }}" alt="Data Plot" class="img-fluid">
-<p>Average Value: <strong>{{ avg }}</strong></p>
+
+{% if ping_data %}
+<h3>Ping Response</h3>
+<p>Message: <strong>{{ ping_data.message }}</strong></p>
+<p>Datetime: <strong>{{ ping_data.datetime }}</strong></p>
+{% else %}
+<p>No ping data available.</p>
+{% endif %}
+
+<h3>Sensors</h3>
+<ul>
+    {% for sensor in sensors %}
+    <li>{{ sensor.name }} - Battery: {{ sensor.battery_percentage }}%</li>
+    {% endfor %}
+</ul>
 {% endblock %}

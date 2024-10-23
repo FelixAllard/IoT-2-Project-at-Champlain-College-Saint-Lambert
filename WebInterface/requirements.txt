@@ -1,3 +1,5 @@
 Flask
 Flask-Login
 matplotlib
+requests
+flask-cors
