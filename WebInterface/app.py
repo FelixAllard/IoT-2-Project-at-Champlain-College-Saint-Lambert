@@ -41,58 +41,30 @@ def set_ip_port():
 
     return render_template('set_ip_port.html')
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET'])
 def login():
     raspberryPi_IP = request.cookies.get('raspberryPi_IP', default_raspberryPi_IP)
-
-    if request.method == 'POST':
-        pi_id = request.form.get('id')
-        password = request.form['password']
-
-        if not pi_id:
-            flash('Raspberry Pi ID is missing. Please try again.')
-            return render_template('login.html', raspberryPi_IP=raspberryPi_IP)
-
-        try:
-            response = requests.post(f'{raspberryPi_IP}/password', json={'id': pi_id, 'password': password})
-            if response.status_code == 200:
-                user = User(id=pi_id)
-                login_user(user)
-                return redirect(url_for('data'))
-            else:
-                flash('Invalid password')
-        except requests.RequestException as e:
-            flash(f"Error during authentication: {e}")
-
     return render_template('login.html', raspberryPi_IP=raspberryPi_IP)
+
+@app.route('/login', methods=['POST'])
+def post_login():
+    if request.is_json:
+        data = request.get_json()
+        pi_id = data.get('id')  # Get the Raspberry Pi ID from the request
+
+        # Here we assume that the password was already verified by Raspberry Pi
+        user = User(id=pi_id)
+        login_user(user)  # Logs in the user via Flask-Login
+
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': 'Invalid request format.'}), 400
 
 
 @app.route('/data')
 @login_required
 def data():
-    raspberryPi_IP = request.cookies.get('raspberryPi_IP', default_raspberryPi_IP)
-
-    try:
-        sensor_response = requests.get(f'{raspberryPi_IP}/sensors')
-        sensor_response.raise_for_status()
-        sensors = sensor_response.json()
-
-        ping_response = requests.get(f'{raspberryPi_IP}/ping')
-        ping_response.raise_for_status()
-        ping_data = ping_response.json()
-
-    except requests.RequestException as e:
-        flash(f"Error fetching data: {e}")
-        sensors = []
-        ping_data = None
-
-
-    if sensors:
-        avg = sum(sensor['battery_percentage'] for sensor in sensors) / len(sensors)
-    else:
-        avg = 0
-
-    return render_template('data.html', avg=avg, sensors=sensors, ping_data=ping_data)
+    return render_template('data.html')
 
 @app.route('/aboutUs')
 def about():

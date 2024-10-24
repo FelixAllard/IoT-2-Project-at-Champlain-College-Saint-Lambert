@@ -54,6 +54,14 @@ nav {
     max-width: 800px;
 }
 
+.mt-3 {
+    margin-top: 1.5rem;
+}
+
+.mt-4 {
+    margin-top: 2rem;
+}
+
 .form-control {
     background-color: #333;
     color: #e0e0e0;
@@ -80,12 +88,20 @@ nav {
     background-color: #3700b3;
 }
 
-img {
-    border-radius: 8px;
+.btn-blue {
+    background-color: #5b5fc7;
+    color: white;
+    border: none;
+    transition: background-color 0.3s ease;
 }
 
-.text-center {
-    text-align: center;
+.btn-blue:hover {
+    background-color: #4749b5;
+}
+
+#retryButton {
+    display: inline-block;
+    margin: 0 auto;
 }
 
 .spinner-border {
@@ -102,53 +118,15 @@ img {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
 }
 
-.btn-blue {
-    background-color: #5b5fc7;
-    color: white;
-    border: none;
-    transition: background-color 0.3s ease;
-}
-
-.btn-blue:hover {
-    background-color: #4749b5;
-}
-
-.form-control {
-    background-color: #333;
-    color: #e0e0e0;
-    border: 1px solid #444;
-    border-radius: 4px;
-    transition: background-color 0.3s ease,
-}
-
-.form-control:focus {
-    background-color: #444;
-    color: #ffffff;
-    border-color: #555;
-    box-shadow: none;
-}
-
-.btn-primary {
-    background-color: #6200ea;
-    border: none;
-    border-radius: 4px;
-    transition: background-color 0.3s ease;
-}
-
-.btn-primary:hover {
-    background-color: #3700b3;
-}
-
 #loadingContainer, #errorContainer {
     max-width: 400px;
-    margin: 20px auto;
-    padding: 15px;
+    text-align: center;
 }
 
-.mt-3 {
-    margin-top: 1.5rem;
+img {
+    border-radius: 8px;
 }
 
-.mt-4 {
-    margin-top: 2rem;
+.text-center {
+    text-align: center;
 }

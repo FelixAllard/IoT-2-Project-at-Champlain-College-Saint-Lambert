@@ -1,19 +1,62 @@
 {% extends "base.html" %}
 
 {% block content %}
-
-{% if ping_data %}
 <h3>Ping Response</h3>
-<p>Message: <strong>{{ ping_data.message }}</strong></p>
-<p>Datetime: <strong>{{ ping_data.datetime }}</strong></p>
-{% else %}
-<p>No ping data available.</p>
-{% endif %}
+<div id="pingResponse">
+    <p>Loading ping data...</p>
+</div>
 
 <h3>Sensors</h3>
-<ul>
-    {% for sensor in sensors %}
-    <li>{{ sensor.name }} - Battery: {{ sensor.battery_percentage }}%</li>
-    {% endfor %}
-</ul>
+<div id="sensorData">
+    <p>Loading sensor data...</p>
+</div>
+
+<script>
+    function fetchData() {
+        const raspberryPi_IP = "{{ request.cookies.get('raspberryPi_IP', default_raspberryPi_IP) }}";
+
+        fetch(`${raspberryPi_IP}/ping`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error fetching ping data');
+                }
+                return response.json();
+            })
+            .then(pingData => {
+                const pingResponseDiv = document.getElementById('pingResponse');
+                pingResponseDiv.innerHTML = `<p>Message: <strong>${pingData.message}</strong></p>
+                                         <p>Datetime: <strong>${pingData.datetime}</strong></p>`;
+            })
+            .catch(error => {
+                document.getElementById('pingResponse').innerHTML = `<p>Error fetching ping data: ${error.message}</p>`;
+            });
+
+        fetch(`${raspberryPi_IP}/sensors`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error fetching sensor data');
+                }
+                return response.json();
+            })
+            .then(sensorData => {
+                const sensorDataDiv = document.getElementById('sensorData');
+                if (sensorData.length > 0) {
+                    let sensorList = '<ul>';
+                    sensorData.forEach(sensor => {
+                        sensorList += `<li>${sensor.name} - Battery: ${sensor.battery_percentage}%</li>`;
+                    });
+                    sensorList += '</ul>';
+                    sensorDataDiv.innerHTML = sensorList;
+                } else {
+                    sensorDataDiv.innerHTML = '<p>No sensor data available.</p>';
+                }
+            })
+            .catch(error => {
+                document.getElementById('sensorData').innerHTML = `<p>Error fetching sensor data: ${error.message}</p>`;
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', fetchData);
+</script>
+
 {% endblock %}
