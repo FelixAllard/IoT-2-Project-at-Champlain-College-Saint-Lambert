@@ -1,10 +1,6 @@
 from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, session, make_response
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-import matplotlib
 from flask_cors import CORS
-import matplotlib.pyplot as plt
-import io
-import base64
 import requests
 
 app = Flask(__name__)
@@ -90,20 +86,13 @@ def data():
         sensors = []
         ping_data = None
 
-    img = io.BytesIO()
-    plt.plot([0, 1, 2, 3], [10, 11, 12, 13])
-    plt.title('Example Plot')
-    plt.savefig(img, format='png')
-    img.seek(0)
-    plot_url = base64.b64encode(img.getvalue()).decode('utf8')
-    plt.close()
 
     if sensors:
         avg = sum(sensor['battery_percentage'] for sensor in sensors) / len(sensors)
     else:
         avg = 0
 
-    return render_template('data.html', plot_url=plot_url, avg=avg, sensors=sensors, ping_data=ping_data)
+    return render_template('data.html', avg=avg, sensors=sensors, ping_data=ping_data)
 
 @app.route('/aboutUs')
 def about():
@@ -121,4 +110,4 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True,host='0.0.0.0', port=25565)
