@@ -5,7 +5,7 @@ from flask_cors import CORS
 from Model.Sensor import Sensor
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "http://localhost:5000"}})
+CORS(app)
 
 raspberryPiCredentials = {
     'id': '1',

@@ -4,7 +4,7 @@ from flask_cors import CORS
 import requests
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "http://localhost:5000"}})
+CORS(app)
 
 # Default IP address for first time logging in
 default_raspberryPi_IP = "http://192.168.0.100:5000"
