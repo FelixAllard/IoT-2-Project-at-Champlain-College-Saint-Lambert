@@ -13,6 +13,12 @@
     {% endwith %}
 </div>
 
+<div id="errorContainer" class="text-center mt-4" style="display: none;">
+    <div class="alert alert-danger" id="errorMessage"></div>
+    <button class="btn btn-blue mt-3" id="retryButton" onclick="checkConnection()">Try to connect again</button>
+</div>
+
+
 <div id="loadingContainer" class="text-center" style="display: none;">
     <div class="alert alert-info" id="loadingMessage" style="background-color: transparent; border: none;">
         <span class="spinner-border text-primary" role="status" aria-hidden="true" style="width: 3rem; height: 3rem;"></span>
@@ -24,7 +30,7 @@
     <p>Your Raspberry PI ID is: <span id="raspberryPiId" class="font-weight-bold"></span></p>
 </div>
 
-<form method="POST" id="loginForm" style="display: none;" onsubmit="showLoading()">
+<form method="POST" id="loginForm" onsubmit="showLoading(event)">
     <input type="hidden" id="piId" name="id">
     <div class="form-group">
         <label for="password">Password</label>
@@ -32,11 +38,6 @@
     </div>
     <button type="submit" class="btn btn-primary mt-3 btn-block">Login</button>
 </form>
-
-<div id="errorContainer" class="text-center mt-4" style="display: none;">
-    <div class="alert alert-danger" id="errorMessage"></div>
-    <button class="btn btn-blue mt-3" id="retryButton" onclick="checkConnection()">Try to connect again</button>
-</div>
 
 <div class="text-center mt-3">
     <p>Current Raspberry Pi IP: <strong>{{ raspberryPi_IP }}</strong></p>
@@ -49,18 +50,66 @@
         window.location.href = "{{ url_for('set_ip_port') }}";
     }
 
-    function showLoading() {
-        document.getElementById('loadingContainer').style.display = 'block';
-        document.getElementById('raspberryPiIdContainer').style.display = 'none';
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('errorContainer').style.display = 'none';
-        document.getElementById('flashMessageContainer').style.display = 'none';
+    function showLoading(event) {
+        event.preventDefault();
 
-        document.getElementById('loadingMessage').innerHTML = `
-            <span class="spinner-border text-primary" role="status" aria-hidden="true" style="width: 3rem; height: 3rem;"></span>
-            <p class="mt-3">Logging in to Raspberry Pi...</p>
-        `;
+        const pi_id = document.getElementById('piId').value;
+        const password = document.getElementById('password').value;
+
+        fetch(`${raspberryPi_IP}/password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: pi_id, password: password })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to authenticate with Raspberry Pi');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.authenticated) {
+                    console.log("Authentication successful. Logging into Flask...");
+
+                    return fetch('/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ id: pi_id, password: password })
+                    });
+                } else {
+                    throw new Error('Invalid password');
+                }
+            })
+            .then(flaskResponse => {
+                if (!flaskResponse.ok) {
+                    throw new Error('Failed to log in to Flask');
+                }
+                return flaskResponse.json();
+            })
+            .then(flaskData => {
+                if (flaskData.success) {
+                    console.log("Flask login successful. Redirecting to data page...");
+                    window.location.href = '/data';
+                } else {
+                    document.getElementById('errorMessage').textContent = 'Flask login failed. Please try again.';
+                    document.getElementById('errorContainer').style.display = 'block';
+                    document.getElementById('loadingContainer').style.display = 'none';
+                    document.getElementById('retryButton').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('errorMessage').textContent = error.message;
+                document.getElementById('errorContainer').style.display = 'block';
+                document.getElementById('loadingContainer').style.display = 'none';
+                document.getElementById('retryButton').style.display = 'none';
+            });
     }
+
 
     function checkConnection() {
         document.getElementById('loadingContainer').style.display = 'block';
@@ -87,6 +136,7 @@
                 console.error('Error connecting to Raspberry Pi:', error);
                 document.getElementById('errorMessage').textContent = 'Couldn\'t connect to the Raspberry PI';
                 document.getElementById('errorContainer').style.display = 'block';
+                document.getElementById('retryButton').style.display = 'block';
                 document.getElementById('loadingContainer').style.display = 'none';
             });
     }
