@@ -50,11 +50,10 @@ def login():
 def post_login():
     if request.is_json:
         data = request.get_json()
-        pi_id = data.get('id')  # Get the Raspberry Pi ID from the request
+        pi_id = data.get('id')
 
-        # Here we assume that the password was already verified by Raspberry Pi
         user = User(id=pi_id)
-        login_user(user)  # Logs in the user via Flask-Login
+        login_user(user)
 
         return jsonify({'success': True})
     else:
