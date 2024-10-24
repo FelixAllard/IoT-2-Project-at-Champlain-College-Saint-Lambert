@@ -55,4 +55,4 @@ def sensor_to_dict(sensor):
     }
 
 if __name__ == '__main__':
-    app.run(debug=True, port=4999)
+    app.run(debug=True, host='0.0.0.0', port=4999)
