@@ -1,17 +1,40 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h3>Ping Response</h3>
-<div id="pingResponse">
-    <p>Loading ping data...</p>
+<div id="pingResponse" class="text-center">
+    <p>Trying to connect...</p>
 </div>
 
-<h3>Sensors</h3>
-<div id="sensorData">
-    <p>Loading sensor data...</p>
+<h3 style="text-align:center; display: none;" id="sensorTitle">Position Data</h3>
+
+<!-- id here has to match the back-end 'name', spaces are ignored -->
+<div id="bodyLayout" style="display: none;">
+    <div id="LeftFoot" class="sensor">Loading...</div>
+    <div id="RightFoot" class="sensor">Loading...</div>
+    <div id="LeftKnee" class="sensor">Loading...</div>
+    <div id="RightKnee" class="sensor">Loading...</div>
+    <div id="Waist" class="sensor">Loading...</div>
 </div>
 
 <script>
+    const TIMEOUT_DURATION = 5000;
+    const sensorTimeouts = {};
+    const sensorStatus = {
+        LeftFoot: false,
+        RightFoot: false,
+        LeftKnee: false,
+        RightKnee: false,
+        Waist: false
+    };
+
+    const sensorFriendlyNames = {
+        LeftFoot: "Left Foot",
+        RightFoot: "Right Foot",
+        LeftKnee: "Left Knee",
+        RightKnee: "Right Knee",
+        Waist: "Waist"
+    };
+
     function fetchData() {
         const raspberryPi_IP = "{{ request.cookies.get('raspberryPi_IP', default_raspberryPi_IP) }}";
 
@@ -23,37 +46,77 @@
                 return response.json();
             })
             .then(pingData => {
-                const pingResponseDiv = document.getElementById('pingResponse');
-                pingResponseDiv.innerHTML = `<p>Message: <strong>${pingData.message}</strong></p>
-                                         <p>Datetime: <strong>${pingData.datetime}</strong></p>`;
+                document.getElementById('pingResponse').innerHTML = `<p></p>`;
+                document.getElementById('sensorTitle').style.display = 'block';
+                document.getElementById('bodyLayout').style.display = 'block';
+
+                setupSSE(raspberryPi_IP);
             })
             .catch(error => {
-                document.getElementById('pingResponse').innerHTML = `<p>Error fetching ping data: ${error.message}</p>`;
+                document.getElementById('pingResponse').innerHTML = `
+                    <div class="text-center">
+                        <h3>Couldn't connect</h3>
+                        <p>Error fetching ping data: ${error.message}</p>
+                    </div>`;
+
+                document.getElementById('sensorTitle').style.display = 'none';
+                document.getElementById('bodyLayout').style.display = 'none';
+            });
+    }
+
+    function setupSSE(raspberryPi_IP) {
+        const eventSource = new EventSource(`${raspberryPi_IP}/sensor-stream`);
+
+        eventSource.onmessage = function(event) {
+            const sensorData = JSON.parse(event.data);
+
+            sensorData.forEach(sensor => {
+                const sensorId = sensor.name.replace(/\s+/g, "");
+                const sensorElement = document.getElementById(sensorId);
+
+                if (sensorTimeouts[sensorId]) {
+                    clearTimeout(sensorTimeouts[sensorId]);
+                }
+
+                sensorStatus[sensorId] = true;
+
+                if (sensorElement) {
+                    sensorElement.innerHTML = `
+                        <strong>${sensorFriendlyNames[sensorId]}</strong><br>
+                        X: ${sensor.coordinates.x.toFixed(2)}<br>
+                        Y: ${sensor.coordinates.y.toFixed(2)}<br>
+                        Z: ${sensor.coordinates.z.toFixed(2)}<br>
+                        Velocity: ${sensor.velocity.toFixed(2)} m/s<br>
+                        Battery: ${sensor.battery_percentage.toFixed(1)}%
+                    `;
+
+                    sensorTimeouts[sensorId] = setTimeout(() => {
+                        const friendlyName = sensorFriendlyNames[sensorId] || sensorId;
+                        sensorElement.innerHTML = `
+                            <br><br>
+                            <strong>Couldn't connect to ${friendlyName}</strong><br>
+                            <br><br>
+                        `;
+                        sensorStatus[sensorId] = false;
+                    }, TIMEOUT_DURATION);
+                }
             });
 
-        fetch(`${raspberryPi_IP}/sensors`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Error fetching sensor data');
-                }
-                return response.json();
-            })
-            .then(sensorData => {
-                const sensorDataDiv = document.getElementById('sensorData');
-                if (sensorData.length > 0) {
-                    let sensorList = '<ul>';
-                    sensorData.forEach(sensor => {
-                        sensorList += `<li>${sensor.name} - Battery: ${sensor.battery_percentage}%</li>`;
-                    });
-                    sensorList += '</ul>';
-                    sensorDataDiv.innerHTML = sensorList;
+            for (const id in sensorStatus) {
+                if (sensorStatus[id]) {
+                    sensorStatus[id] = false;
                 } else {
-                    sensorDataDiv.innerHTML = '<p>No sensor data available.</p>';
+                    const sensorElement = document.getElementById(id);
+                    if (sensorElement && sensorElement.innerHTML === "Loading...") {
+                        sensorElement.innerHTML = `<br><br><strong>Couldn't connect to ${sensorFriendlyNames[id]}</strong><br><br><br>`;
+                    }
                 }
-            })
-            .catch(error => {
-                document.getElementById('sensorData').innerHTML = `<p>Error fetching sensor data: ${error.message}</p>`;
-            });
+            }
+        };
+
+        eventSource.onerror = function() {
+            document.getElementById('pingResponse').innerHTML = '<p>Error connecting to sensor stream.</p>';
+        };
     }
 
     document.addEventListener('DOMContentLoaded', fetchData);
