@@ -130,3 +130,54 @@ img {
 .text-center {
     text-align: center;
 }
+
+#bodyLayout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    height: 660px;
+    width: 670px;
+    margin: 0 auto;
+    background-color: rgba(30, 30, 30, 0.9);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.sensor {
+    border: 1px solid #444;
+    background-color: #2e2e2e;
+    color: #e0e0e0;
+    padding: 10px;
+    border-radius: 8px;
+    position: absolute;
+    text-align: center;
+    margin: 10px;
+    width: 200px;
+}
+
+#LeftFoot {
+    top: 70%;
+    left: calc(15% - 100px);
+}
+
+#RightFoot {
+    top: 70%;
+    left: calc(81.5% - 100px);
+}
+
+#LeftKnee {
+    top: 35%;
+    left: calc(27.5% - 100px);
+}
+
+#RightKnee {
+    top: 35%;
+    left: calc(69.5% - 100px);
+}
+
+#Waist {
+    top: 1%;
+    left: calc(31.5% + 15px);
+}
