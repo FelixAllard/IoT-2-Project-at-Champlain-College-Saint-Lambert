@@ -69,11 +69,6 @@ def data():
 def about():
     return render_template('aboutus.html', title='About Us')
 
-@app.route('/id', methods=['GET'])
-def get_id():
-    raspberry_pi_id = '1'
-    return jsonify({'id': raspberry_pi_id})
-
 @app.route('/logout')
 @login_required
 def logout():
