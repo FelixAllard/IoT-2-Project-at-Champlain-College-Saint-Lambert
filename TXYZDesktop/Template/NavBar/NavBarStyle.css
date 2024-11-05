@@ -1,0 +1,23 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+.top-bar {
+    background-color: black;
+    color: white;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    height: 30px;
+    -webkit-user-select: none; /* Disable text selection */
+    -webkit-app-region: drag; /* Allows dragging the window */
+}
+
+.title {
+    margin-left: 10px;
+}
+
+.content {
+    padding: 20px;
+}
