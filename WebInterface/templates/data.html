@@ -77,7 +77,6 @@
                 document.getElementById('continuousData').style.display = 'block';
 
                 setupSSE(raspberryPi_IP);  // Start receiving sensor data for old sensors
-                setupRealSensorSSE(raspberryPi_IP);  // Start receiving real sensor data
             })
             .catch(error => {
                 document.getElementById('pingResponse').innerHTML = `
@@ -141,55 +140,6 @@
         };
     }
 
-    function setupRealSensorSSE(raspberryPi_IP) {
-        const eventSource = new EventSource(`${raspberryPi_IP}/real-sensor-stream`);
-
-        eventSource.onmessage = function(event) {
-            const sensorData = JSON.parse(event.data);
-
-            // Handle real sensor data
-            const sensorId = 'RealSensor';
-            const sensorElement = document.getElementById(sensorId);
-
-            if (sensorTimeouts[sensorId]) {
-                clearTimeout(sensorTimeouts[sensorId]);
-            }
-
-            sensorStatus[sensorId] = true;
-
-            if (sensorElement) {
-                sensorElement.innerHTML = `
-                    <strong>${sensorFriendlyNames[sensorId]}</strong><br>
-                    X: ${sensorData.position.x.toFixed(2)}<br>
-                    Y: ${sensorData.position.y.toFixed(2)}<br>
-                    Z: ${sensorData.position.z.toFixed(2)}<br>
-                    Velocity: ${sensorData.velocity.toFixed(2)} m/s<br>
-                    Pitch: ${sensorData.orientation.pitch.toFixed(2)}°
-                `;
-
-                // Update live sensor values square for real sensor
-                updateLiveValues(sensorId, sensorData);
-
-                // Update continuous data display
-                updateContinuousData(sensorId, sensorData);
-
-                sensorTimeouts[sensorId] = setTimeout(() => {
-                    const friendlyName = sensorFriendlyNames[sensorId] || sensorId;
-                    sensorElement.innerHTML = `
-                        <br><br>
-                        <strong>Couldn't connect to ${friendlyName}</strong><br>
-                        <br><br>
-                    `;
-                    sensorStatus[sensorId] = false;
-                }, TIMEOUT_DURATION);
-            }
-        };
-
-        eventSource.onerror = function() {
-            document.getElementById('pingResponse').innerHTML = '<p>Error connecting to real sensor stream.</p>';
-        };
-    }
-
     // Function to update the live values square
     function updateLiveValues(sensorId, sensorData) {
         const liveValuesContent = document.getElementById('liveValuesContent');
@@ -214,27 +164,50 @@
         }
     }
 
-    // Function to update the continuous data box
-    function updateContinuousData(sensorId, sensorData) {
-        const continuousDataContent = document.getElementById('continuousDataContent');
-        continuousDataContent.innerHTML = `<strong>${sensorFriendlyNames[sensorId]}</strong><br>`;
+    // Initialize MQTT Client (WebSocket connection)
+    const client = mqtt.connect('ws://<your-mqtt-broker>:9001'); // Update the broker URL if necessary
 
-        if (sensorData.position) {
-            continuousDataContent.innerHTML += `
+    client.on('connect', function () {
+        console.log('Connected to MQTT broker');
+        // Subscribe to the topic you are publishing to
+        client.subscribe('sensor/data', function (err) {
+            if (err) {
+                console.log('Error subscribing:', err);
+            } else {
+                console.log('Subscribed to sensor/data');
+            }
+        });
+    });
+
+    // When message is received from MQTT
+    client.on('message', function (topic, message) {
+        // Parse the received message (payload)
+        const sensorData = JSON.parse(message.toString());
+
+        // Handle the sensor data
+        const sensorId = 'RealSensor'; // You can modify this according to your needs
+        const sensorElement = document.getElementById(sensorId);
+        if (sensorElement) {
+            sensorElement.innerHTML = `
+                <strong>${sensorFriendlyNames[sensorId]}</strong><br>
                 X: ${sensorData.position.x.toFixed(2)}<br>
                 Y: ${sensorData.position.y.toFixed(2)}<br>
                 Z: ${sensorData.position.z.toFixed(2)}<br>
                 Velocity: ${sensorData.velocity.toFixed(2)} m/s<br>
+                Pitch: ${sensorData.orientation.pitch.toFixed(2)}°<br>
+                High: ${sensorData.high}<br>
+                DeltaV: ${sensorData.deltaV}<br>
             `;
-        } else {
-            continuousDataContent.innerHTML += `
-                X: ${sensorData.coordinates.x.toFixed(2)}<br>
-                Y: ${sensorData.coordinates.y.toFixed(2)}<br>
-                Z: ${sensorData.coordinates.z.toFixed(2)}<br>
-                Velocity: ${sensorData.velocity.toFixed(2)} m/s<br>
-            `;
+
+            // You can call your update functions here
+            updateContinuousData(sensorId, sensorData); // Assuming you still need this function to update continuous data
+            updateLiveValues(sensorId, sensorData); // Same as above, if you want to update the live values
         }
-    }
+    });
+
+    client.on('error', function (err) {
+        console.log('MQTT connection error:', err);
+    });
 
     window.onload = fetchData;
 </script>
