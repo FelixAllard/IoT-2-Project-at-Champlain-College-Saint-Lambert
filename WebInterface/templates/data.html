@@ -5,10 +5,11 @@
     <p>Trying to connect...</p>
 </div>
 
-<h3 style="text-align:center; display: none;" id="sensorTitle">Position Data</h3>
+<h3 style="text-align:center; display: none;" id="sensorTitle">Sensor Data</h3>
 
 <!-- id here has to match the back-end 'name', spaces are ignored -->
 <div id="bodyLayout" style="display: none;">
+    <h3>Old Sensors</h3>
     <div id="LeftFoot" class="sensor">Loading...</div>
     <div id="RightFoot" class="sensor">Loading...</div>
     <div id="LeftKnee" class="sensor">Loading...</div>
@@ -16,15 +17,21 @@
     <div id="Waist" class="sensor">Loading...</div>
 </div>
 
+<div id="bodyLayout" style="display: none;"></div>
+    <h3>Real Sensor</h3>
+    <div id="RealSensor" class="sensor">Loading...</div>
+</div>
+
 <script>
-    const TIMEOUT_DURATION = 5000;
-    const sensorTimeouts = {};
+    const TIMEOUT_DURATION = 5000; // Timeout duration for sensor data updates
+    const sensorTimeouts = {}; // Keeps track of timeout for each sensor
     const sensorStatus = {
         LeftFoot: false,
         RightFoot: false,
         LeftKnee: false,
         RightKnee: false,
-        Waist: false
+        Waist: false,
+        RealSensor: false // Track real sensor status
     };
 
     const sensorFriendlyNames = {
@@ -32,7 +39,8 @@
         RightFoot: "Right Foot",
         LeftKnee: "Left Knee",
         RightKnee: "Right Knee",
-        Waist: "Waist"
+        Waist: "Waist",
+        RealSensor: "Real Sensor" // Friendly name for real sensor
     };
 
     function fetchData() {
@@ -50,7 +58,8 @@
                 document.getElementById('sensorTitle').style.display = 'block';
                 document.getElementById('bodyLayout').style.display = 'block';
 
-                setupSSE(raspberryPi_IP);
+                setupSSE(raspberryPi_IP);  // Start receiving sensor data for old sensors
+                setupRealSensorSSE(raspberryPi_IP);  // Start receiving real sensor data
             })
             .catch(error => {
                 document.getElementById('pingResponse').innerHTML = `
@@ -71,7 +80,7 @@
             const sensorData = JSON.parse(event.data);
 
             sensorData.forEach(sensor => {
-                const sensorId = sensor.name.replace(/\s+/g, "");
+                const sensorId = sensor.name.replace(/\s+/g, ""); // Removing spaces for ID
                 const sensorElement = document.getElementById(sensorId);
 
                 if (sensorTimeouts[sensorId]) {
@@ -102,6 +111,7 @@
                 }
             });
 
+            // Check if any sensor is offline and update status
             for (const id in sensorStatus) {
                 if (sensorStatus[id]) {
                     sensorStatus[id] = false;
@@ -116,6 +126,52 @@
 
         eventSource.onerror = function() {
             document.getElementById('pingResponse').innerHTML = '<p>Error connecting to sensor stream.</p>';
+        };
+    }
+
+    function setupRealSensorSSE(raspberryPi_IP) {
+        const eventSource = new EventSource(`${raspberryPi_IP}/real-sensor-stream`);
+
+        eventSource.onmessage = function(event) {
+            const sensorData = JSON.parse(event.data);
+
+            // Handle real sensor data
+            const sensorId = 'RealSensor';
+            const sensorElement = document.getElementById(sensorId);
+
+            if (sensorTimeouts[sensorId]) {
+                clearTimeout(sensorTimeouts[sensorId]);
+            }
+
+            sensorStatus[sensorId] = true;
+
+            if (sensorElement) {
+                sensorElement.innerHTML = `
+                    <strong>${sensorFriendlyNames[sensorId]}</strong><br>
+                    X: ${sensorData.position.x.toFixed(2)}<br>
+                    Y: ${sensorData.position.y.toFixed(2)}<br>
+                    Z: ${sensorData.position.z.toFixed(2)}<br>
+                    Velocity: ${sensorData.velocity.toFixed(2)} m/s<br>
+                    Pitch: ${sensorData.orientation.pitch.toFixed(2)}°
+                `;
+
+
+
+                // Timeout after 5 seconds if no new data received
+                sensorTimeouts[sensorId] = setTimeout(() => {
+                    const friendlyName = sensorFriendlyNames[sensorId] || sensorId;
+                    sensorElement.innerHTML = `
+                        <br><br>
+                        <strong>Couldn't connect to ${friendlyName}</strong><br>
+                        <br><br>
+                    `;
+                    sensorStatus[sensorId] = false;
+                }, TIMEOUT_DURATION);
+            }
+        };
+
+        eventSource.onerror = function() {
+            document.getElementById('pingResponse').innerHTML = '<p>Error connecting to real sensor stream.</p>';
         };
     }
 

@@ -7,6 +7,9 @@ import time
 import random
 
 from Model.Sensor import Sensor
+from Model.Sensor import RealSensor
+
+real_sensor = RealSensor()
 
 app = Flask(__name__)
 CORS(app)
@@ -28,6 +31,17 @@ sensors = [
 def ping():
     current_time = datetime.now().isoformat()
     return jsonify({'message': 'pong', 'datetime': current_time}), 200
+
+@app.route('/real-sensor-stream', methods=['GET'])
+def real_sensor_stream():
+    def event_stream():
+        while True:
+            sensor_data = real_sensor.read_sensor()
+
+            yield f"data: {json.dumps(sensor_data)}\n\n"
+            time.sleep(0.1)  # Update every 100 ms (10 Hz)
+
+    return Response(event_stream(), mimetype="text/event-stream")
 
 @app.route('/sensor-stream', methods=['GET'])
 def stream_sensors():
