@@ -19,6 +19,8 @@ import time
 import math
 import numpy as np
 from smbus2 import SMBus
+import json
+import paho.mqtt.client as mqtt
 
 # I2C configuration
 I2C_BUS = 1
@@ -119,17 +121,40 @@ class RealSensor:
         self._update_position(accel_data)
 
         # Return sensor data as a dictionary
-        return {
-            'position': {
-                'x': round(self.position[0], 2),
-                'y': round(self.position[1], 2),
-                'z': round(self.position[2], 2)
-            },
-            'velocity': round(np.linalg.norm(self.velocity), 2),
-            'orientation': {
-                'pitch': round(self.orientation[1], 2)
+        def send_data_to_mqtt(position, velocity, orientation, topic, broker_address='localhost', port=1883):
+            # Prepare the payload
+            payload = {
+                'position': {
+                    'x': round(position[0], 2),
+                    'y': round(position[1], 2),
+                    'z': round(position[2], 2)
+                },
+                'velocity': round(np.linalg.norm(velocity), 2),
+                'orientation': {
+                    'pitch': round(orientation[1], 2)
+                }
             }
-        }
+
+            # Convert the payload to a JSON string
+            json_payload = json.dumps(payload)
+
+            # Initialize the MQTT client
+            client = mqtt.Client()
+
+            try:
+                # Connect to the MQTT broker
+                client.connect(broker_address, port, 60)
+
+                # Publish the message to the specified topic
+                client.publish(topic, json_payload)
+                print(f"Data sent to topic '{topic}': {json_payload}")
+
+            except Exception as e:
+                print(f"Failed to send data to MQTT: {e}")
+
+            finally:
+                # Disconnect from the broker
+                client.disconnect()
 
     def __del__(self):
         """Ensure the bus is closed on deletion."""

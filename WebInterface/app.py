@@ -6,7 +6,7 @@ import requests
 app = Flask(__name__)
 CORS(app)
 
-# Default IP address for first time logging in
+# Default IP address for first-time logging in
 default_raspberryPi_IP = "http://192.168.0.100:5000"
 app.config['SECRET_KEY'] = 'secure_key'
 
@@ -21,6 +21,9 @@ class User(UserMixin):
 @login_manager.user_loader
 def load_user(user_id):
     return User(user_id)
+
+# Store the latest MQTT data
+latest_mqtt_data = {}
 
 # Routes/Routing
 
@@ -59,11 +62,10 @@ def post_login():
     else:
         return jsonify({'success': False, 'message': 'Invalid request format.'}), 400
 
-
 @app.route('/data')
 @login_required
 def data():
-    return render_template('data.html')
+    return render_template('data.html', mqtt_data=latest_mqtt_data)
 
 @app.route('/aboutUs')
 def about():
@@ -74,6 +76,17 @@ def about():
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+# New endpoint to receive MQTT data
+@app.route('/receive_mqtt_data', methods=['POST'])
+def receive_mqtt_data():
+    global latest_mqtt_data
+    if request.is_json:
+        data = request.get_json()
+        latest_mqtt_data = data
+        return jsonify({'success': True, 'message': 'MQTT data received successfully.'})
+    else:
+        return jsonify({'success': False, 'message': 'Invalid request format.'}), 400
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=25565)
