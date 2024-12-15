@@ -4,7 +4,7 @@
 <div id="pingResponse" class="text-center">
     <p>Trying to connect...</p>
 </div>
-
+<script src="node_modules/mqtt"></script>
 <h3 style="text-align:center; display: none;" id="sensorTitle">Sensor Data</h3>
 
 <!-- id here has to match the back-end 'name', spaces are ignored -->
@@ -26,6 +26,12 @@
 <div id="liveValues" style="margin-top: 20px; padding: 20px; background-color: #f0f0f0; border: 1px solid #ccc; display: none;">
     <h4>Live Sensor Values</h4>
     <div id="liveValuesContent">Waiting for data...</div>
+</div>
+
+<!-- Continuous Live Data Section -->
+<div id="continuousData" style="margin-top: 20px; padding: 20px; background-color: #d3f9d8; border: 1px solid #ccc; display: none;">
+    <h4>Continuous Live Sensor Data</h4>
+    <div id="continuousDataContent">Waiting for continuous data...</div>
 </div>
 
 <script>
@@ -66,6 +72,9 @@
 
                 // Show live values square
                 document.getElementById('liveValues').style.display = 'block';
+
+                // Show continuous data box
+                document.getElementById('continuousData').style.display = 'block';
 
                 setupSSE(raspberryPi_IP);  // Start receiving sensor data for old sensors
                 setupRealSensorSSE(raspberryPi_IP);  // Start receiving real sensor data
@@ -111,6 +120,9 @@
                     // Update live sensor values square
                     updateLiveValues(sensorId, sensor);
 
+                    // Update continuous data display
+                    updateContinuousData(sensorId, sensor);
+
                     sensorTimeouts[sensorId] = setTimeout(() => {
                         const friendlyName = sensorFriendlyNames[sensorId] || sensorId;
                         sensorElement.innerHTML = `
@@ -122,18 +134,6 @@
                     }, TIMEOUT_DURATION);
                 }
             });
-
-            // Check if any sensor is offline and update status
-            for (const id in sensorStatus) {
-                if (sensorStatus[id]) {
-                    sensorStatus[id] = false;
-                } else {
-                    const sensorElement = document.getElementById(id);
-                    if (sensorElement && sensorElement.innerHTML === "Loading...") {
-                        sensorElement.innerHTML = `<br><br><strong>Couldn't connect to ${sensorFriendlyNames[id]}</strong><br><br><br>`;
-                    }
-                }
-            }
         };
 
         eventSource.onerror = function() {
@@ -169,6 +169,9 @@
 
                 // Update live sensor values square for real sensor
                 updateLiveValues(sensorId, sensorData);
+
+                // Update continuous data display
+                updateContinuousData(sensorId, sensorData);
 
                 sensorTimeouts[sensorId] = setTimeout(() => {
                     const friendlyName = sensorFriendlyNames[sensorId] || sensorId;
@@ -211,7 +214,28 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded', fetchData);
-</script>
+    // Function to update the continuous data box
+    function updateContinuousData(sensorId, sensorData) {
+        const continuousDataContent = document.getElementById('continuousDataContent');
+        continuousDataContent.innerHTML = `<strong>${sensorFriendlyNames[sensorId]}</strong><br>`;
 
+        if (sensorData.position) {
+            continuousDataContent.innerHTML += `
+                X: ${sensorData.position.x.toFixed(2)}<br>
+                Y: ${sensorData.position.y.toFixed(2)}<br>
+                Z: ${sensorData.position.z.toFixed(2)}<br>
+                Velocity: ${sensorData.velocity.toFixed(2)} m/s<br>
+            `;
+        } else {
+            continuousDataContent.innerHTML += `
+                X: ${sensorData.coordinates.x.toFixed(2)}<br>
+                Y: ${sensorData.coordinates.y.toFixed(2)}<br>
+                Z: ${sensorData.coordinates.z.toFixed(2)}<br>
+                Velocity: ${sensorData.velocity.toFixed(2)} m/s<br>
+            `;
+        }
+    }
+
+    window.onload = fetchData;
+</script>
 {% endblock %}
