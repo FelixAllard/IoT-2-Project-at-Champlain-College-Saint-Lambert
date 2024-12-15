@@ -17,9 +17,15 @@
     <div id="Waist" class="sensor">Loading...</div>
 </div>
 
-<div id="bodyLayout" style="display: none;"></div>
+<div id="bodyLayout" style="display: none;">
     <h3>Real Sensor</h3>
     <div id="RealSensor" class="sensor">Loading...</div>
+</div>
+
+<!-- New square to display live values -->
+<div id="liveValues" style="margin-top: 20px; padding: 20px; background-color: #f0f0f0; border: 1px solid #ccc; display: none;">
+    <h4>Live Sensor Values</h4>
+    <div id="liveValuesContent">Waiting for data...</div>
 </div>
 
 <script>
@@ -57,6 +63,9 @@
                 document.getElementById('pingResponse').innerHTML = `<p></p>`;
                 document.getElementById('sensorTitle').style.display = 'block';
                 document.getElementById('bodyLayout').style.display = 'block';
+
+                // Show live values square
+                document.getElementById('liveValues').style.display = 'block';
 
                 setupSSE(raspberryPi_IP);  // Start receiving sensor data for old sensors
                 setupRealSensorSSE(raspberryPi_IP);  // Start receiving real sensor data
@@ -98,6 +107,9 @@
                         Velocity: ${sensor.velocity.toFixed(2)} m/s<br>
                         Battery: ${sensor.battery_percentage.toFixed(1)}%
                     `;
+
+                    // Update live sensor values square
+                    updateLiveValues(sensorId, sensor);
 
                     sensorTimeouts[sensorId] = setTimeout(() => {
                         const friendlyName = sensorFriendlyNames[sensorId] || sensorId;
@@ -155,9 +167,9 @@
                     Pitch: ${sensorData.orientation.pitch.toFixed(2)}°
                 `;
 
+                // Update live sensor values square for real sensor
+                updateLiveValues(sensorId, sensorData);
 
-
-                // Timeout after 5 seconds if no new data received
                 sensorTimeouts[sensorId] = setTimeout(() => {
                     const friendlyName = sensorFriendlyNames[sensorId] || sensorId;
                     sensorElement.innerHTML = `
@@ -173,6 +185,30 @@
         eventSource.onerror = function() {
             document.getElementById('pingResponse').innerHTML = '<p>Error connecting to real sensor stream.</p>';
         };
+    }
+
+    // Function to update the live values square
+    function updateLiveValues(sensorId, sensorData) {
+        const liveValuesContent = document.getElementById('liveValuesContent');
+        liveValuesContent.innerHTML = `<strong>${sensorFriendlyNames[sensorId]}</strong><br>`;
+
+        if (sensorData.position) {
+            liveValuesContent.innerHTML += `
+                X: ${sensorData.position.x.toFixed(2)}<br>
+                Y: ${sensorData.position.y.toFixed(2)}<br>
+                Z: ${sensorData.position.z.toFixed(2)}<br>
+                Velocity: ${sensorData.velocity.toFixed(2)} m/s<br>
+                Battery: ${sensorData.battery_percentage ? sensorData.battery_percentage.toFixed(1) + "%" : "N/A"}<br>
+            `;
+        } else {
+            liveValuesContent.innerHTML += `
+                X: ${sensorData.coordinates.x.toFixed(2)}<br>
+                Y: ${sensorData.coordinates.y.toFixed(2)}<br>
+                Z: ${sensorData.coordinates.z.toFixed(2)}<br>
+                Velocity: ${sensorData.velocity.toFixed(2)} m/s<br>
+                Battery: ${sensorData.battery_percentage.toFixed(1)}%
+            `;
+        }
     }
 
     document.addEventListener('DOMContentLoaded', fetchData);

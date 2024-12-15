@@ -121,7 +121,8 @@ class RealSensor:
         self._update_position(accel_data)
 
         # Return sensor data as a dictionary
-        def send_data_to_mqtt(position, velocity, orientation, topic, broker_address='localhost', port=1883):
+        def send_data_to_mqtt(position, velocity, orientation, high, delta_v, topic, broker_address='localhost',
+                              port=1883):
             # Prepare the payload
             payload = {
                 'position': {
@@ -129,10 +130,12 @@ class RealSensor:
                     'y': round(position[1], 2),
                     'z': round(position[2], 2)
                 },
-                'velocity': round(np.linalg.norm(velocity), 2),
+                'velocity': round(np.linalg.norm(velocity), 2),  # Assuming velocity is a vector
                 'orientation': {
                     'pitch': round(orientation[1], 2)
-                }
+                },
+                'high': high,  # Assuming 'high' is a numerical value
+                'deltaV': delta_v  # Assuming 'deltaV' is a numerical value
             }
 
             # Convert the payload to a JSON string
